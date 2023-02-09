@@ -10,18 +10,15 @@ namespace Normal
         private int _seed;
         private float _noiseScale;
         private int _octaves;
-        private int _chunkSize;
+        private int _chunkSize = 256;
         public GameObject chunkPrefab;
 
 
         private void GenerateOne()
         {
-            Chunk chunk = new Chunk(new Vector2(0, 0), _chunkSize, _seed, _noiseScale, _octaves);
-            GameObject chunkGO = Instantiate(chunkPrefab, Vector2.zero, Quaternion.identity);
+            GameObject chunkGO = Instantiate(GameObject.Find("Chunk"), Vector2.one, Quaternion.identity);
             chunkGO.AddComponent<Chunk>();
-            chunkGO.GetComponent<Chunk>().SetChunk(chunk);
-            
-            chunkGO.GetComponent<Chunk>().GenerateData();
+            chunkGO.GetComponent<Chunk>().GenerateData(Vector2.one, _chunkSize, _seed, _noiseScale, _octaves);
         }
         
         void Update()

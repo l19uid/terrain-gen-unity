@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using Normal;
 using Unity.VisualScripting;
 using UnityEngine;
+using static Normal.FastNoiseLite;
 
 public class Chunk : MonoBehaviour
 {
@@ -10,11 +12,10 @@ public class Chunk : MonoBehaviour
     [SerializeField]
     private int _size;
     private int _seed;
-    private float _noiseScale;
-    private int _octaves;
-    private List<Vector3> _vertices;
+    private Vector3[] _vertices;
     private List<int> _indices;
     private Mesh _mesh;
+    private FastNoiseLite noise;
     
     //private Vector3[] _corners = new Vector3[8]
     //{
@@ -28,76 +29,96 @@ public class Chunk : MonoBehaviour
     //    new Vector3(1,1,1)
     //};
     
-    public Chunk(Vector2 pos, int size, int seed, float noiseScale, int octaves)
-    {
-        _pos = pos;
-        _size = size;
-        _seed = seed;
-        _noiseScale = noiseScale;
-        _octaves = octaves;
-        _mesh = new Mesh();
-    }
-    
-    Vector3[] newVertices = new Vector3[3]
-    {
-        new Vector3(0,0,0),
-        new Vector3(1,0,0),
-        new Vector3(0,1,0)
-    };
-    int[] newTriangles = new []{0,1,2};
-
-    void Start()
-    {
-        Mesh mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
-        mesh.Clear();
-        mesh.vertices = newVertices;
-        mesh.triangles = newTriangles;
-    }
-    
     public Vector2 GetPos()
     {
         return _pos;
     }
     
-    public void SetChunk(Chunk chunk)
-    {
-        _pos = chunk._pos;
-        _size = chunk._size;
-        _seed = chunk._seed;
-        _noiseScale = chunk._noiseScale;
-        _octaves = chunk._octaves;
-        _mesh = chunk._mesh;
-        _mesh = new Mesh();
-    }
-    
     // Update is called once per frame
-    public void GenerateData()
+    public void GenerateData(Vector3 pos, int size,int seed, float noiseScale,int octaves)
     {
+        ChunkData chunkData = new ChunkData(pos, size);
         _mesh = new Mesh();
         _mesh.name = "Chunk " + _pos;
-        
-        _vertices = new List<Vector3>();
-        _indices = new List<int>();
-        
+        noise = new FastNoiseLite(_seed);
+
+        int _verticesCount = 0;
+
         for (int x = 0; x < _size; x++)
         {
             for (int z = 0; z < _size; z++)
             {
-                float yNoise = (int)(Mathf.PerlinNoise(x, z) * 50);
+                float yNoise = Mathf.Abs(noise.GetNoise(x, z))* 10;
                 
-                _vertices.Add(new Vector3(x, yNoise, z));
-                _indices.Add(_vertices.Count - 1);
+                chunkData.AddVertice(new Vector3(x, yNoise, z));
+
+                if (x < _size - 1 && z < _size - 1)
+                {
+                    chunkData.AddIndices(_verticesCount, _verticesCount + _size + 1, _verticesCount + _size);
+                    chunkData.AddIndices(_verticesCount, _verticesCount + 1, _verticesCount + _size + 1);
+                }
+                _verticesCount++;
             }
         }
+        chunkData.Render(GetComponent<MeshFilter>());
+    }
+}
+
+public class ChunkData
+{
+    private Vector2 pos;
+    private int size;
+    
+    private Vector3[] _vertices;
+    private int[] _indices;
+
+    private int _indiceCount = 0;
+    private int _verticeCount = 0;
+    
+    public ChunkData(Vector2 pos, int size)
+    {
+        this.pos = pos;
+        this.size = size;
         
-        _mesh.SetIndices(_indices, MeshTopology.Points, 0);
-        _mesh.SetVertices(_vertices);        
-        
-        GetComponent<MeshFilter>().mesh = _mesh;
-        
-        _mesh.triangles = _indices.ToArray();
-        _mesh.RecalculateNormals();
+        _vertices = new Vector3[size * size];
+        _indices = new int[size * size];
     }
     
+    public Vector2 GetPos()
+    {
+        return pos;
+    }
+    
+    public void AddIndices(int a,int b,int c)
+    {
+        _indices[_indiceCount++] = a;
+        _indices[_indiceCount++] = b;
+        _indices[_indiceCount++] = c;
+    }
+    
+    public void AddVertice(Vector3 vertice)
+    {
+        _vertices[_verticeCount++] = vertice;
+    }
+    
+    public Vector3[] GetVertices()
+    {
+        return _vertices;
+    }
+    
+    public int[] GetIndices()
+    {
+        return _indices;
+    }
+    
+    public void Render(MeshFilter meshFilter)
+    {
+        Mesh _mesh = new Mesh();
+        _mesh.SetVertices(_vertices);        
+        _mesh.SetIndices(_indices, MeshTopology.LineStrip, 0);
+        
+        _mesh.RecalculateNormals();
+        
+        meshFilter.mesh = _mesh;
+    }
 }
