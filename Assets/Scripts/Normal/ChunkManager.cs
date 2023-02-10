@@ -10,7 +10,7 @@ namespace Normal
         private int _seed;
         private float _noiseScale;
         private int _octaves;
-        private int _chunkSize = 256;
+        private int _chunkSize = 255;
         public GameObject chunkPrefab;
 
 
@@ -23,7 +23,7 @@ namespace Normal
         
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.G))
                 GenerateOne();
         }
     }
