@@ -13,10 +13,11 @@ public class Chunk : MonoBehaviour
     private int _size;
     private int _seed;
     private Vector3[] _vertices;
-    private List<int> _indices;
+    private int[] _indices;
     private Mesh _mesh;
     private FastNoiseLite primaryNoise;
     private FastNoiseLite secondaryNoise;
+    private FastNoiseLite highriseNoise;
     
     //private Vector3[] _corners = new Vector3[8]
     //{
@@ -38,14 +39,15 @@ public class Chunk : MonoBehaviour
     // Update is called once per frame
     public void GenerateData(Vector3 pos, int size,int seed, float noiseScale,int octaves)
     {
-        Debug.Log(size);
         ChunkData chunkData = new ChunkData(pos, size);
         _mesh = new Mesh();
         _mesh.name = "Chunk " + _pos;
         primaryNoise = new FastNoiseLite(_seed);
-        primaryNoise.SetFrequency(.075f);
-        secondaryNoise = new FastNoiseLite(_seed+3);
-        primaryNoise.SetFrequency(.05f);
+        primaryNoise.SetFrequency(.015f);
+        secondaryNoise = new FastNoiseLite(_seed);
+        primaryNoise.SetFrequency(.025f);
+        highriseNoise = new FastNoiseLite(_seed);
+        highriseNoise.SetFrequency(.005f);
 
         int _verticesCount = 0;
 
@@ -53,9 +55,11 @@ public class Chunk : MonoBehaviour
         {
             for (int z = 0; z < size; z++)
             {
-                float noiseOne = (primaryNoise.GetNoise(x, z))* 20;
-                float noiseTwo = (secondaryNoise.GetNoise(x / 2, z / 2))* 10;
+                float noiseOne = (primaryNoise.GetNoise(x +(pos.x*size), z+(pos.z*size))* 10);
+                float noiseTwo = (secondaryNoise.GetNoise(x +(pos.x*size), z+(pos.z*size))* 30);
+                float noiseThree = (highriseNoise.GetNoise(x +(pos.x*size), z+(pos.z*size))* 50);
                 float yNoise = Mathf.Lerp(noiseOne, noiseTwo, .5f);
+                yNoise = Mathf.Lerp(yNoise, noiseThree, .5f);
                 
                 chunkData.AddVertice(new Vector3(x, yNoise, z));
 
@@ -68,7 +72,6 @@ public class Chunk : MonoBehaviour
             }
         }
         _mesh.SetVertices(chunkData.GetVertices());        
-        Debug.Log(chunkData.GetIndices().Length);
         _mesh.SetIndices(chunkData.GetIndices(), MeshTopology.Triangles, 0);
         
         _mesh.RecalculateNormals();
@@ -92,9 +95,9 @@ public class ChunkData
     {
         this.pos = pos;
         this.size = size;
-        
-        _vertices = new Vector3[this.size * this.size];
-        _indices = new int[this.size * this.size * this.size];
+
+        _vertices = new Vector3[size * size];
+        _indices = new int[(size - 1) * (size - 1) * 6];
     }
     
     public Vector2 GetPos()
